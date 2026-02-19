@@ -166,7 +166,7 @@ export class EnemySystem {
         });
 
         // 与B-03联动：升级经验收益
-        upgradeSystem.addExperience(enemy.getExpValue());
+        upgradeSystem.addExp(enemy.getExpValue());
     }
 
     private getNearest(position: Vector2): EnemyWithAI | null {

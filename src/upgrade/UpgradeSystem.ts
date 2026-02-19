@@ -113,10 +113,6 @@ export class UpgradeSystem {
         this.expOrbs = remained;
     }
 
-
-    public addExperience(amount: number): void {
-        this.addExp(amount);
-    }
     public addExp(amount: number): void {
         this.currentExp += amount;
 
