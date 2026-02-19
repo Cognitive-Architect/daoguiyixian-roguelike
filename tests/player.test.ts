@@ -9,9 +9,9 @@
  * - NEG-001 快速交替A/D不抽搐（平滑插值）
  */
 
-import { PlayerController, PlayerState, DEFAULT_PLAYER_STATS } from '../src/player/PlayerController';
+import { PlayerController, PlayerState, DEFAULT_PLAYER_STATS, EffectType } from '../src/player/PlayerController';
 import { InputManager, InputAction } from '../src/input/InputManager';
-import { EventBus } from '../src/core/EventBus';
+import { EventBus, GameEvents } from '../src/core/EventBus';
 
 // Mock InputManager
 jest.mock('../src/input/InputManager', () => ({
@@ -259,16 +259,14 @@ describe('PlayerController', () => {
 
     describe('攻击系统', () => {
         test('攻击冷却', () => {
-            mockInput.isActionPressed.mockReturnValue(true);
-            
-            // 第一次攻击
+            player.setEnemyTargets([{ position: { x: 50, y: 0 } }]);
+
             player.update(1 / 60);
-            
-            // 立即再次尝试攻击（应该在冷却中）
-            mockInput.isActionPressed.mockReturnValue(true);
+            const stateAfterFirst = player.getState();
+
             player.update(1 / 60);
-            
-            // 攻击状态应该还在持续
+
+            expect(stateAfterFirst).toBe(PlayerState.ATTACK);
             expect(player.getState()).toBe(PlayerState.ATTACK);
         });
     });
@@ -341,3 +339,83 @@ console.log('FUNC-001: 8方向移动流畅 - PASS');
 console.log('FUNC-002: 撞墙不穿透（AABB验证）- PASS (collision system)');
 console.log('FUNC-003: 停止输入0.1秒内速度归零 - PASS');
 console.log('NEG-001: 快速交替A/D不抽搐 - PASS');
+
+
+describe('B-01: PlayerController 单手爽游需求', () => {
+    let player: PlayerController;
+    let mockInput: any;
+
+    beforeEach(() => {
+        player = new PlayerController();
+        mockInput = (InputManager.getInstance as jest.Mock)();
+        player.reset();
+    });
+
+    test('虚拟摇杆输出归一化方向向量（-1~1）', () => {
+        mockInput.getMoveDirection.mockReturnValue({ x: 3, y: 4 });
+        mockInput.getMoveMagnitude.mockReturnValue(1);
+
+        const dir = player.getNormalizedJoystickDirection();
+
+        expect(dir.x).toBeCloseTo(0.6, 2);
+        expect(dir.y).toBeCloseTo(0.8, 2);
+        expect(Math.abs(dir.x)).toBeLessThanOrEqual(1);
+        expect(Math.abs(dir.y)).toBeLessThanOrEqual(1);
+    });
+
+    test('自动攻击在范围内每0.5秒触发一次', () => {
+        const attacks: any[] = [];
+        const bus = EventBus.getInstance();
+        bus.on(GameEvents.PLAYER_ATTACK, (payload) => attacks.push(payload));
+
+        player.setEnemyTargets([{ id: 'enemy-1', position: { x: 60, y: 0 } }]);
+
+        for (let i = 0; i < 70; i++) {
+            player.update(1 / 60);
+        }
+
+        expect(attacks.length).toBeGreaterThanOrEqual(2);
+    });
+
+    test('SAN<30%时移速1.2x并切换紫火特效', () => {
+        player.setSanity(20);
+        mockInput.getMoveDirection.mockReturnValue({ x: 1, y: 0 });
+        mockInput.getMoveMagnitude.mockReturnValue(1);
+
+        for (let i = 0; i < 12; i++) {
+            player.update(1 / 60);
+        }
+
+        expect(player.getSpeed()).toBeGreaterThan(DEFAULT_PLAYER_STATS.moveSpeed);
+        expect(player.getAttackEffectType()).toBe(EffectType.PURPLE_FLAME);
+    });
+
+    test('读取player.json并应用baseSpeed、attackRange', () => {
+        player.applyConfig({
+            baseSpeed: 360,
+            maxHp: 150,
+            attackRange: 180,
+        });
+
+        const stats = player.getStats();
+        expect(stats.moveSpeed).toBe(360);
+        expect(stats.attackRange).toBe(180);
+    });
+
+    test('通过事件总线发送PLAYER_MOVE和PLAYER_ATTACK', () => {
+        const events: string[] = [];
+        const bus = EventBus.getInstance();
+
+        bus.on(GameEvents.PLAYER_MOVE, () => events.push('move'));
+        bus.on(GameEvents.PLAYER_ATTACK, () => events.push('attack'));
+
+        mockInput.getMoveDirection.mockReturnValue({ x: 1, y: 0 });
+        mockInput.getMoveMagnitude.mockReturnValue(1);
+        player.setEnemyTargets([{ id: 'enemy-2', position: { x: 40, y: 0 } }]);
+
+        player.update(1 / 60);
+
+        expect(events).toContain('move');
+        expect(events).toContain('attack');
+    });
+});
