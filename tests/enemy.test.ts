@@ -47,9 +47,9 @@ describe('B-04 EnemySystem', () => {
         expect(enemy.getPosition().x).toBeLessThan(80);
     });
 
-    test('敌人死亡调用UpgradeSystem.addExp并掉落经验', () => {
+    test('敌人死亡调用UpgradeSystem.addExperience并掉落经验', () => {
         const id = enemySystem.spawnEnemy('jiangshi', { x: 30, y: 0 });
-        const expSpy = jest.spyOn(upgradeSystem, 'addExp');
+        const expSpy = jest.spyOn(upgradeSystem, 'addExperience');
 
         enemySystem.applyWeaponHit(id!, { x: 30, y: 0 }, 999, 'NORMAL');
 
