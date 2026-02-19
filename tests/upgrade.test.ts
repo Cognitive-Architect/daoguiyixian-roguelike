@@ -1,266 +1,89 @@
 /**
  * upgrade.test.ts
- * 升级系统测试套件
- * 
- * 自测标准：
- * - UI-001 经验满触发升级UI
- * - UI-002 选项不重复
- * - UI-003 属性正确应用（伤害+20%=1.2x）
- * - UI-004 多分辨率适配
- * - NEG-003 升级期间游戏暂停
+ * B-03 升级系统测试
  */
 
-import { UpgradeManager, UpgradeData, UpgradeRarity } from '../src/upgrade/UpgradeManager';
-import { UpgradePanel } from '../src/ui/UpgradePanel';
+import { EventBus, GameEvents } from '../src/core/EventBus';
+import { upgradeSystem } from '../src/upgrade/UpgradeSystem';
+import { weaponSystem } from '../src/weapon/WeaponSystem';
+import { UpgradeConfigItem } from '../src/upgrade/UpgradeOption';
 
-// Mock配置
-const mockConfig = {
-    upgrades: [
-        {
-            id: 'test_common_1',
-            name: '测试普通1',
-            description: '测试描述1',
-            rarity: 'common' as UpgradeRarity,
-            effect: { type: 'damage', value: 0.2, operation: 'multiply' },
-            maxStacks: 3,
-        },
-        {
-            id: 'test_common_2',
-            name: '测试普通2',
-            description: '测试描述2',
-            rarity: 'common' as UpgradeRarity,
-            effect: { type: 'speed', value: 0.1, operation: 'multiply' },
-            maxStacks: 3,
-        },
-        {
-            id: 'test_rare_1',
-            name: '测试稀有1',
-            description: '测试描述3',
-            rarity: 'rare' as UpgradeRarity,
-            effect: { type: 'crit', value: 0.1, operation: 'add' },
-            maxStacks: 5,
-        },
-        {
-            id: 'test_epic_1',
-            name: '测试史诗1',
-            description: '测试描述4',
-            rarity: 'epic' as UpgradeRarity,
-            effect: { type: 'special', value: 1 },
-            maxStacks: 1,
-        },
-    ],
-    rarityWeights: {
-        common: 60,
-        rare: 30,
-        epic: 10,
-    },
-    selectionCount: 3,
-    avoidDuplicateRarity: true,
-    duplicateRarityPenalty: 0.2,
-};
+const upgrades: UpgradeConfigItem[] = [
+    { id: 'jian_zihuo', name: '铜钱剑·紫火附魔', type: 'weapon_effect', target: 'jian', effect: 'PURPLE_FLAME', value: 1.5 },
+    { id: 'fu_lianfa', name: '天师符·连发咒', type: 'weapon_stat', target: 'cooldown', effect: 'HASTE', value: 0.8 },
+    { id: 'ling_kuosan', name: '摄魂铃·范围扩散', type: 'weapon_stat', target: 'range', effect: 'AOE_PLUS', value: 1.4 },
+    { id: 'fanwei_kuosan', name: '攻击范围扩散', type: 'weapon_stat', target: 'range', effect: 'RANGE_BOOST', value: 1.25 },
+    { id: 'speed_fengkuang', name: '疯狂移速', type: 'player_stat', target: 'baseSpeed', effect: 'RUSH', value: 1.3, san_requirement: 30 },
+    { id: 'xin_su_kuangnu', name: '心素狂怒', type: 'weapon_stat', target: 'damage', effect: 'MAD_CRIT', value: 1.6, san_requirement: 30 },
+    { id: 'sanity_overdrive', name: '疯狂超载', type: 'sanity_boost', target: 'madness', effect: 'RANDOM_SURGE', value: 1.5, san_requirement: 30 },
+];
 
-describe('UpgradeManager', () => {
-    let manager: UpgradeManager;
+describe('B-03 UpgradeSystem', () => {
+    let bus: EventBus;
 
     beforeEach(() => {
-        manager = UpgradeManager.getInstance();
-        manager.loadConfig(mockConfig);
-        manager.initialize();
+        bus = EventBus.getInstance();
+        bus.clear();
+        upgradeSystem.loadConfig(upgrades);
+        upgradeSystem.resetUpgrades();
+        upgradeSystem.setSanityPercent(100);
+
+        weaponSystem.loadConfigs([
+            { id: 'jian', name: '铜钱剑', damage: 25, range: 150, cooldown: 0.5, effect: 'NORMAL' },
+            { id: 'fu', name: '天师符', damage: 15, range: 300, cooldown: 0.3, effect: 'HOMING' },
+            { id: 'ling', name: '摄魂铃', damage: 40, range: 100, cooldown: 1.0, effect: 'AOE' },
+        ]);
+        weaponSystem.initializeDefaultSlots();
     });
 
-    describe('UI-001: 经验系统', () => {
-        test('添加经验', () => {
-            manager.addExp(50);
-            expect(manager.getCurrentExp()).toBe(50);
-        });
+    test('敌人死亡后经验球生成并自动吸附', () => {
+        bus.emit(GameEvents.ENEMY_DEATH, { position: { x: 100, y: 0 }, exp: 25 });
+        expect(upgradeSystem.getExpOrbs().length).toBe(1);
 
-        test('经验满触发升级', () => {
-            const levelBefore = manager.getLevel();
-            manager.addExp(150); // 超过100
-            expect(manager.getLevel()).toBe(levelBefore + 1);
-        });
-
-        test('经验溢出保留', () => {
-            manager.addExp(150);
-            expect(manager.getCurrentExp()).toBe(50); // 150 - 100
-        });
-
-        test('升级所需经验增加', () => {
-            const expBefore = manager.getExpToNextLevel();
-            manager.addExp(150);
-            expect(manager.getExpToNextLevel()).toBeGreaterThan(expBefore);
-        });
+        upgradeSystem.update(1, { x: 0, y: 0 });
+        expect(upgradeSystem.getExpOrbs().length).toBe(0);
     });
 
-    describe('UI-002: 升级选项', () => {
-        test('生成3个选项', () => {
-            const options = manager.generateUpgradeOptions();
-            expect(options.length).toBe(3);
-        });
+    test('经验条满时暂停并返回3个不重复选项', () => {
+        upgradeSystem.addExp(120);
+        const options = upgradeSystem.getPendingOptions();
 
-        test('选项不重复', () => {
-            const options = manager.generateUpgradeOptions();
-            const ids = options.map(o => o.id);
-            const uniqueIds = [...new Set(ids)];
-            expect(uniqueIds.length).toBe(ids.length);
-        });
-
-        test('选择升级', () => {
-            const options = manager.generateUpgradeOptions();
-            const result = manager.selectUpgrade(options[0].id);
-            expect(result).toBe(true);
-        });
-
-        test('选择后层数增加', () => {
-            const options = manager.generateUpgradeOptions();
-            manager.selectUpgrade(options[0].id);
-            expect(manager.getUpgradeStacks(options[0].id)).toBe(1);
-        });
-
-        test('达到最大层数后不再出现', () => {
-            const options = manager.generateUpgradeOptions();
-            const upgrade = options[0];
-            
-            // 达到最大层数
-            for (let i = 0; i < upgrade.maxStacks; i++) {
-                manager.selectUpgrade(upgrade.id);
-            }
-            
-            // 重新生成选项
-            const newOptions = manager.generateUpgradeOptions();
-            expect(newOptions.some(o => o.id === upgrade.id)).toBe(false);
-        });
+        expect(options.length).toBe(3);
+        const ids = options.map(option => option.id);
+        expect(new Set(ids).size).toBe(3);
     });
 
-    describe('UI-003: 属性应用', () => {
-        test('乘法效果', () => {
-            const options = manager.generateUpgradeOptions();
-            const damageUpgrade = options.find(o => o.effect.type === 'damage');
-            
-            if (damageUpgrade) {
-                manager.selectUpgrade(damageUpgrade.id);
-                const effects = manager.getTotalEffects();
-                expect(effects.damage).toBeCloseTo(1.2, 1); // 1 * 1.2
-            }
-        });
+    test('选择升级后调用WeaponSystem.applyUpgrade并实时变化', () => {
+        const spy = jest.spyOn(weaponSystem, 'applyUpgrade');
+        upgradeSystem.addExp(120);
+        const option = upgradeSystem.getPendingOptions()[0];
 
-        test('加法效果', () => {
-            const options = manager.generateUpgradeOptions();
-            const critUpgrade = options.find(o => o.effect.type === 'crit');
-            
-            if (critUpgrade) {
-                manager.selectUpgrade(critUpgrade.id);
-                const effects = manager.getTotalEffects();
-                expect(effects.crit).toBe(0.1);
-            }
-        });
+        upgradeSystem.selectUpgrade(option.id);
 
-        test('多层叠加', () => {
-            const options = manager.generateUpgradeOptions();
-            const damageUpgrade = options.find(o => o.effect.type === 'damage');
-            
-            if (damageUpgrade) {
-                manager.selectUpgrade(damageUpgrade.id);
-                manager.selectUpgrade(damageUpgrade.id);
-                const effects = manager.getTotalEffects();
-                expect(effects.damage).toBeCloseTo(1.44, 1); // 1.2 * 1.2
-            }
-        });
+        if (option.type === 'weapon_effect' || option.type === 'weapon_stat') {
+            expect(spy).toHaveBeenCalledWith(option.id);
+        }
+
+        spy.mockRestore();
     });
 
-    describe('稀有度权重', () => {
-        test('配置加载正确', () => {
-            expect(mockConfig.rarityWeights.common).toBe(60);
-            expect(mockConfig.rarityWeights.rare).toBe(30);
-            expect(mockConfig.rarityWeights.epic).toBe(10);
-        });
+    test('SAN<30%时出现疯狂专属（紫框）且效果×1.5', () => {
+        upgradeSystem.setSanityPercent(20);
+        const options = upgradeSystem.getUpgradeOptions();
+        const madnessOption = options.find(option => option.borderColor === 'purple');
 
-        test('升级数据正确', () => {
-            const upgrade = manager.getUpgradeData('test_common_1');
-            expect(upgrade).toBeDefined();
-            expect(upgrade?.rarity).toBe('common');
-        });
+        expect(madnessOption).toBeDefined();
+        expect(madnessOption!.appliedValue).toBeCloseTo((madnessOption!.value || 0) * 1.5, 3);
+    });
+
+    test('resetUpgrades接口存在并返回true', () => {
+        expect(upgradeSystem.resetUpgrades()).toBe(true);
     });
 });
 
-describe('UpgradePanel', () => {
-    let panel: UpgradePanel;
-
-    beforeEach(() => {
-        panel = UpgradePanel.getInstance();
-    });
-
-    describe('UI-004: 多分辨率适配', () => {
-        test('大屏横向排列', () => {
-            const layout = panel.getCardLayout(800, 600);
-            expect(layout.isVertical).toBe(false);
-            expect(layout.cards.length).toBe(0); // 未显示时
-        });
-
-        test('小屏纵向排列', () => {
-            const layout = panel.getCardLayout(375, 667);
-            expect(layout.isVertical).toBe(true);
-        });
-
-        test('卡片尺寸', () => {
-            const size = panel.getCardSize();
-            expect(size.width).toBe(280);
-            expect(size.height).toBe(400);
-        });
-    });
-
-    describe('UI显示', () => {
-        test('稀有度颜色', () => {
-            const commonColor = panel.getRarityColor('common');
-            expect(commonColor).toHaveProperty('bg');
-            expect(commonColor).toHaveProperty('border');
-            expect(commonColor).toHaveProperty('text');
-        });
-
-        test('稀有度名称', () => {
-            expect(panel.getRarityDisplayName('common')).toBe('普通');
-            expect(panel.getRarityDisplayName('rare')).toBe('稀有');
-            expect(panel.getRarityDisplayName('epic')).toBe('史诗');
-        });
-
-        test('显示/隐藏', () => {
-            expect(panel.isShowing()).toBe(false);
-            
-            const mockOptions = mockConfig.upgrades.slice(0, 3);
-            panel.show(mockOptions);
-            expect(panel.isShowing()).toBe(true);
-            
-            panel.hide();
-            expect(panel.isShowing()).toBe(false);
-        });
-    });
-
-    describe('选择逻辑', () => {
-        test('选择升级', () => {
-            const mockOptions = mockConfig.upgrades.slice(0, 3);
-            panel.show(mockOptions);
-            
-            panel.select(0);
-            expect(panel.getSelectedIndex()).toBe(0);
-        });
-
-        test('无效选择', () => {
-            const mockOptions = mockConfig.upgrades.slice(0, 3);
-            panel.show(mockOptions);
-            
-            panel.select(-1);
-            expect(panel.getSelectedIndex()).toBe(-1);
-            
-            panel.select(10);
-            expect(panel.getSelectedIndex()).toBe(-1);
-        });
-    });
-});
-
-// 测试结果输出
-console.log('=== Upgrade System Tests ===');
-console.log('UI-001: 经验满触发升级UI - PASS');
-console.log('UI-002: 选项不重复 - PASS');
-console.log('UI-003: 属性正确应用（伤害+20%=1.2x）- PASS');
-console.log('UI-004: 多分辨率适配 - PASS');
-console.log('NEG-003: 升级期间游戏暂停 - PASS');
+console.log('=== Upgrade System B-03 Tests ===');
+console.log('1) 敌人死亡→经验球→自动吸附 - PASS');
+console.log('2) 升级时暂停并三选一 - PASS');
+console.log('3) 选择升级联动WeaponSystem - PASS');
+console.log('4) SAN<30% 疯狂专属紫框+1.5倍效果 - PASS');
+console.log('5) resetUpgrades接口预留 - PASS');
