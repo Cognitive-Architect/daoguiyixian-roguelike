@@ -1,29 +1,17 @@
 /**
  * CollisionManager.ts
- * 碰撞管理器 - 武器与敌人碰撞检测
- * 
- * 核心功能：AABB碰撞检测，Group掩码
- * 
- * DEBT-B06-002: 碰撞体用矩形（非精确多边形）
+ * B-06 碰撞系统（层管理 + AABB检测 + 敌人弹性分离）
  */
 
-import { AABB, AABBPhysics, Vector2 } from '../physics/AABB';
-import { EventBus, GameEvents } from '../core/EventBus';
+import { AABB, AABBPhysics, Vector2, Vec2 } from '../physics/AABB';
+import { CollisionLayer, CollisionMasks } from './CollisionLayers';
 
-export enum CollisionGroup {
-    NONE = 0,
-    PLAYER = 1 << 0,
-    ENEMY = 1 << 1,
-    PROJECTILE = 1 << 2,
-    WALL = 1 << 3,
-    ITEM = 1 << 4,
-    TRIGGER = 1 << 5,
-}
+export { CollisionLayer as CollisionGroup }; // 兼容旧命名
 
 export interface CollisionBody {
     id: string;
     aabb: AABB;
-    group: CollisionGroup;
+    group: CollisionLayer;
     mask: number;
     owner: any;
     isTrigger: boolean;
@@ -36,114 +24,68 @@ export interface CollisionResult {
     penetration: Vector2;
 }
 
-export class WeaponCollisionManager {
-    private static instance: WeaponCollisionManager;
-    private eventBus: EventBus;
-    
-    // 碰撞体
+export class CollisionManager {
+    private static instance: CollisionManager;
     private bodies: Map<string, CollisionBody> = new Map();
-    private nextId: number = 0;
-    
-    // 碰撞回调
-    private collisionCallbacks: Map<string, ((result: CollisionResult) => void)[]> = new Map();
+    private nextId = 0;
+    private callbacks: Map<string, Array<(result: CollisionResult) => void>> = new Map();
 
-    private constructor() {
-        this.eventBus = EventBus.getInstance();
-    }
-
-    public static getInstance(): WeaponCollisionManager {
-        if (!WeaponCollisionManager.instance) {
-            WeaponCollisionManager.instance = new WeaponCollisionManager();
+    public static getInstance(): CollisionManager {
+        if (!CollisionManager.instance) {
+            CollisionManager.instance = new CollisionManager();
         }
-        return WeaponCollisionManager.instance;
+        return CollisionManager.instance;
     }
 
-    /**
-     * 创建碰撞体
-     */
     public createBody(
         aabb: AABB,
-        group: CollisionGroup,
-        mask: number,
-        owner: any,
-        isTrigger: boolean = false
+        group: CollisionLayer,
+        mask: number = CollisionMasks.ENEMY,
+        owner: any = null,
+        isTrigger: boolean = false,
     ): CollisionBody {
         const id = `body_${++this.nextId}`;
-        const body: CollisionBody = {
-            id,
-            aabb: { ...aabb },
-            group,
-            mask,
-            owner,
-            isTrigger,
-            enabled: true,
-        };
+        const body: CollisionBody = { id, aabb: { ...aabb }, group, mask, owner, isTrigger, enabled: true };
         this.bodies.set(id, body);
         return body;
     }
 
-    /**
-     * 移除碰撞体
-     */
     public removeBody(id: string): void {
         this.bodies.delete(id);
-        this.collisionCallbacks.delete(id);
     }
 
-    /**
-     * 更新碰撞体位置
-     */
     public updateBodyPosition(id: string, position: Vector2): void {
         const body = this.bodies.get(id);
         if (!body) return;
 
         const width = body.aabb.max.x - body.aabb.min.x;
         const height = body.aabb.max.y - body.aabb.min.y;
-        
-        body.aabb.min.x = position.x - width / 2;
-        body.aabb.min.y = position.y - height / 2;
-        body.aabb.max.x = position.x + width / 2;
-        body.aabb.max.y = position.y + height / 2;
+        body.aabb.min = { x: position.x - width / 2, y: position.y - height / 2 };
+        body.aabb.max = { x: position.x + width / 2, y: position.y + height / 2 };
     }
 
-    /**
-     * 注册碰撞回调
-     */
+
     public onCollision(bodyId: string, callback: (result: CollisionResult) => void): void {
-        if (!this.collisionCallbacks.has(bodyId)) {
-            this.collisionCallbacks.set(bodyId, []);
+        if (!this.callbacks.has(bodyId)) {
+            this.callbacks.set(bodyId, []);
         }
-        this.collisionCallbacks.get(bodyId)!.push(callback);
+        this.callbacks.get(bodyId)!.push(callback);
     }
 
-    /**
-     * 检测碰撞
-     */
     public detectCollisions(): CollisionResult[] {
         const results: CollisionResult[] = [];
-        const bodies = Array.from(this.bodies.values()).filter(b => b.enabled);
+        const list = Array.from(this.bodies.values()).filter(b => b.enabled);
 
-        for (let i = 0; i < bodies.length; i++) {
-            for (let j = i + 1; j < bodies.length; j++) {
-                const a = bodies[i];
-                const b = bodies[j];
+        for (let i = 0; i < list.length; i++) {
+            for (let j = i + 1; j < list.length; j++) {
+                const a = list[i];
+                const b = list[j];
+                if ((a.mask & b.group) === 0 && (b.mask & a.group) === 0) continue;
 
-                // 检查掩码
-                if ((a.mask & b.group) === 0 && (b.mask & a.group) === 0) {
-                    continue;
-                }
-
-                // 检测碰撞
                 const intersection = AABBPhysics.getIntersection(a.aabb, b.aabb);
                 if (intersection) {
-                    const result: CollisionResult = {
-                        bodyA: a,
-                        bodyB: b,
-                        penetration: intersection.penetration,
-                    };
+                    const result = { bodyA: a, bodyB: b, penetration: intersection.penetration };
                     results.push(result);
-
-                    // 触发回调
                     this.triggerCallbacks(a.id, result);
                     this.triggerCallbacks(b.id, result);
                 }
@@ -153,29 +95,47 @@ export class WeaponCollisionManager {
         return results;
     }
 
-    /**
-     * 触发回调
-     */
-    private triggerCallbacks(bodyId: string, result: CollisionResult): void {
-        const callbacks = this.collisionCallbacks.get(bodyId);
-        if (!callbacks) return;
 
-        for (const callback of callbacks) {
-            try {
-                callback(result);
-            } catch (error) {
-                console.error(`[WeaponCollisionManager] Error in collision callback:`, error);
+    private triggerCallbacks(bodyId: string, result: CollisionResult): void {
+        const list = this.callbacks.get(bodyId);
+        if (!list) return;
+        for (const callback of list) {
+            callback(result);
+        }
+    }
+
+    public resolveEnemySeparation(minDistance: number = 50, elasticity: number = 0.8): void {
+        const enemies = Array.from(this.bodies.values()).filter(b => b.enabled && b.group === CollisionLayer.ENEMY);
+
+        for (let i = 0; i < enemies.length; i++) {
+            for (let j = i + 1; j < enemies.length; j++) {
+                const a = enemies[i];
+                const b = enemies[j];
+                const ac = this.getCenter(a.aabb);
+                const bc = this.getCenter(b.aabb);
+                const dx = bc.x - ac.x;
+                const dy = bc.y - ac.y;
+                const dist = Math.hypot(dx, dy) || 0.0001;
+
+                if (dist < minDistance) {
+                    const push = ((minDistance - dist) / 2) * elasticity;
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+
+                    this.updateBodyPosition(a.id, { x: ac.x - nx * push, y: ac.y - ny * push });
+                    this.updateBodyPosition(b.id, { x: bc.x + nx * push, y: bc.y + ny * push });
+                }
             }
         }
     }
 
-    /**
-     * 检测投射物与敌人碰撞
-     */
+    public computePlayerPushVelocity(playerVelocity: Vector2): Vector2 {
+        return Vec2.mul(playerVelocity, 0.8); // 可挤过敌人，减速20%
+    }
+
     public checkProjectileEnemyCollision(projectileAABB: AABB): CollisionBody | null {
         for (const body of this.bodies.values()) {
-            if (!body.enabled || body.group !== CollisionGroup.ENEMY) continue;
-            
+            if (!body.enabled || body.group !== CollisionLayer.ENEMY) continue;
             if (AABBPhysics.intersects(projectileAABB, body.aabb)) {
                 return body;
             }
@@ -183,65 +143,46 @@ export class WeaponCollisionManager {
         return null;
     }
 
-    /**
-     * 检测近战攻击范围内的敌人
-     */
-    public getEnemiesInMeleeRange(
-        center: Vector2,
-        range: number,
-        direction: Vector2,
-        angle: number
-    ): CollisionBody[] {
-        const results: CollisionBody[] = [];
-        const angleRad = (angle * Math.PI) / 180;
-        const halfAngle = angleRad / 2;
-        const baseAngle = Math.atan2(direction.y, direction.x);
+    public getEnemiesInMeleeRange(center: Vector2, range: number, direction: Vector2, angle: number): CollisionBody[] {
+        const result: CollisionBody[] = [];
+        const half = ((angle * Math.PI) / 180) / 2;
+        const base = Math.atan2(direction.y, direction.x);
 
         for (const body of this.bodies.values()) {
-            if (!body.enabled || body.group !== CollisionGroup.ENEMY) continue;
+            if (!body.enabled || body.group !== CollisionLayer.ENEMY) continue;
+            const c = this.getCenter(body.aabb);
+            const dx = c.x - center.x;
+            const dy = c.y - center.y;
+            const d = Math.hypot(dx, dy);
+            if (d > range) continue;
 
-            const bodyCenter = {
-                x: (body.aabb.min.x + body.aabb.max.x) / 2,
-                y: (body.aabb.min.y + body.aabb.max.y) / 2,
-            };
-
-            const dx = bodyCenter.x - center.x;
-            const dy = bodyCenter.y - center.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance > range) continue;
-
-            // 角度检查
-            const targetAngle = Math.atan2(dy, dx);
-            const angleDiff = Math.abs(targetAngle - baseAngle);
-            const normalizedDiff = Math.min(angleDiff, 2 * Math.PI - angleDiff);
-
-            if (normalizedDiff <= halfAngle) {
-                results.push(body);
-            }
+            const ta = Math.atan2(dy, dx);
+            const diff = Math.min(Math.abs(ta - base), Math.PI * 2 - Math.abs(ta - base));
+            if (diff <= half) result.push(body);
         }
 
-        return results;
+        return result;
     }
 
-    /**
-     * 清空所有碰撞体
-     */
     public clear(): void {
         this.bodies.clear();
-        this.collisionCallbacks.clear();
+        this.callbacks.clear();
         this.nextId = 0;
     }
 
-    /**
-     * 获取统计
-     */
     public getStats(): { bodyCount: number } {
+        return { bodyCount: this.bodies.size };
+    }
+
+    private getCenter(aabb: AABB): Vector2 {
         return {
-            bodyCount: this.bodies.size,
+            x: (aabb.min.x + aabb.max.x) / 2,
+            y: (aabb.min.y + aabb.max.y) / 2,
         };
     }
 }
 
-// 便捷导出单例
-export const weaponCollisionManager = WeaponCollisionManager.getInstance();
+// 兼容旧导出名
+export const weaponCollisionManager = CollisionManager.getInstance();
+export const collisionManager = CollisionManager.getInstance();
+export class WeaponCollisionManager extends CollisionManager {}
