@@ -1,0 +1,9 @@
+{
+  "collision": {
+    "playerEnemy": {"damage": true, "knockback": 0, "invincibleTime": 1.5},
+    "weaponEnemy": {"damage": true, "knockback": 3.0, "hitstop": 0.1},
+    "enemyEnemy": {"elastic": 0.8, "minDistance": 50},
+    "playerObstacle": {"block": true, "slide": true}
+  },
+  "bulletTime": {"triggerCombo": 20, "duration": 0.3, "timeScale": 0.3}
+}
