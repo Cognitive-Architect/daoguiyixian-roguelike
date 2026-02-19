@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="《道诡异仙》Roguelike游戏 - 同人二创作品">
+    <title>道诡异仙 - Roguelike</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0a0a0a;
+            touch-action: none;
+        }
+        
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #game-canvas {
+            display: block;
+            background: #1a1a2e;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-family: sans-serif;
+            text-align: center;
+        }
+        
+        #loading h1 {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        
+        #loading p {
+            font-size: 14px;
+            color: #888;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+    </div>
+    
+    <div id="loading">
+        <h1>道诡异仙</h1>
+        <p>加载中...</p>
+    </div>
+    
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

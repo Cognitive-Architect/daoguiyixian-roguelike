@@ -1,0 +1,388 @@
+{
+  "upgrades": [
+    {
+      "id": "copper_sword_mastery",
+      "name": "铜钱剑法",
+      "description": "铜钱剑伤害+20%",
+      "rarity": "common",
+      "effect": {
+        "type": "weapon_damage",
+        "weapon": "copper_sword",
+        "value": 0.2,
+        "operation": "multiply"
+      },
+      "maxStacks": 3
+    },
+    {
+      "id": "talisman_mastery",
+      "name": "符咒精通",
+      "description": "阴阳符持续时间+2秒",
+      "rarity": "common",
+      "effect": {
+        "type": "skill_duration",
+        "skill": "talisman",
+        "value": 2,
+        "operation": "add"
+      },
+      "maxStacks": 3
+    },
+    {
+      "id": "vigor_boost",
+      "name": "血气壮盛",
+      "description": "最大HP+15",
+      "rarity": "common",
+      "effect": {
+        "type": "max_hp",
+        "value": 15,
+        "operation": "add"
+      },
+      "maxStacks": 5
+    },
+    {
+      "id": "mind_stable",
+      "name": "心神稳固",
+      "description": "最大SAN+15",
+      "rarity": "common",
+      "effect": {
+        "type": "max_san",
+        "value": 15,
+        "operation": "add"
+      },
+      "maxStacks": 5
+    },
+    {
+      "id": "light_step",
+      "name": "步履轻盈",
+      "description": "移速+10%",
+      "rarity": "common",
+      "effect": {
+        "type": "move_speed",
+        "value": 0.1,
+        "operation": "multiply"
+      },
+      "maxStacks": 3
+    },
+    {
+      "id": "quick_hands",
+      "name": "眼疾手快",
+      "description": "攻速+10%",
+      "rarity": "common",
+      "effect": {
+        "type": "attack_speed",
+        "value": 0.1,
+        "operation": "multiply"
+      },
+      "maxStacks": 3
+    },
+    {
+      "id": "thick_skin",
+      "name": "皮糙肉厚",
+      "description": "受伤-10%",
+      "rarity": "common",
+      "effect": {
+        "type": "damage_reduction",
+        "value": 0.1,
+        "operation": "multiply"
+      },
+      "maxStacks": 3
+    },
+    {
+      "id": "blood_for_blood",
+      "name": "以血还血",
+      "description": "吸血+5%",
+      "rarity": "common",
+      "effect": {
+        "type": "life_steal",
+        "value": 0.05,
+        "operation": "add"
+      },
+      "maxStacks": 5
+    },
+    {
+      "id": "eagle_eye",
+      "name": "火眼金睛",
+      "description": "暴击率+5%",
+      "rarity": "common",
+      "effect": {
+        "type": "crit_rate",
+        "value": 0.05,
+        "operation": "add"
+      },
+      "maxStacks": 5
+    },
+    {
+      "id": "qi_focus",
+      "name": "气沉丹田",
+      "description": "冷却-10%",
+      "rarity": "common",
+      "effect": {
+        "type": "cooldown_reduction",
+        "value": 0.1,
+        "operation": "multiply"
+      },
+      "maxStacks": 3
+    },
+    {
+      "id": "corpse_possession",
+      "name": "借尸还魂",
+      "description": "复活时HP+30%",
+      "rarity": "common",
+      "effect": {
+        "type": "revive_hp",
+        "value": 0.3,
+        "operation": "add"
+      },
+      "maxStacks": 2
+    },
+    {
+      "id": "play_fool",
+      "name": "装疯卖傻",
+      "description": "SAN下降速度-10%",
+      "rarity": "common",
+      "effect": {
+        "type": "sanity_drain_reduction",
+        "value": 0.1,
+        "operation": "multiply"
+      },
+      "maxStacks": 3
+    },
+    {
+      "id": "xin_su_awakening",
+      "name": "心素初醒",
+      "description": "低SAN（<30）伤害+10%",
+      "rarity": "common",
+      "effect": {
+        "type": "low_sanity_damage",
+        "threshold": 30,
+        "value": 0.1,
+        "operation": "add"
+      },
+      "maxStacks": 3
+    },
+    {
+      "id": "cang_deng_jie",
+      "name": "苍蜣登阶",
+      "description": "击杀5%几率额外升级",
+      "rarity": "common",
+      "effect": {
+        "type": "kill_upgrade_chance",
+        "value": 0.05,
+        "operation": "add"
+      },
+      "maxStacks": 2
+    },
+    {
+      "id": "dice_trick",
+      "name": "骰子戏法",
+      "description": "商店价格±20%随机",
+      "rarity": "common",
+      "effect": {
+        "type": "shop_price_random",
+        "value": 0.2,
+        "operation": "multiply"
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "xin_su_awakened",
+      "name": "心素觉醒",
+      "description": "SAN波动±20，低SAN伤害+30%",
+      "rarity": "rare",
+      "unlockCondition": "xin_su_awakening_3",
+      "effect": {
+        "type": "sanity_fluctuation",
+        "fluctuation": 20,
+        "lowSanityDamage": 0.3
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "dan_yang_possession",
+      "name": "丹阳子附体",
+      "description": "自动回血3%/秒，SAN固定为0",
+      "rarity": "rare",
+      "unlockCondition": "clear_level_1",
+      "effect": {
+        "type": "auto_heal",
+        "value": 0.03,
+        "lockSanity": true
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "zuo_wang_san_yuan",
+      "name": "坐忘道·三元",
+      "description": "25%闪避，敌人仇恨混乱",
+      "rarity": "rare",
+      "unlockCondition": "deceived_5_times",
+      "effect": {
+        "type": "evasion",
+        "value": 0.25,
+        "confuseAggro": true
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "ba_hui_gaze",
+      "name": "巴虺注视",
+      "description": "HP每降10%，伤害+15%（最高+150%）",
+      "rarity": "rare",
+      "unlockCondition": "no_damage_level_4",
+      "effect": {
+        "type": "low_hp_damage",
+        "hpStep": 0.1,
+        "damagePerStep": 0.15,
+        "maxDamage": 1.5
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "xi_shen_dress",
+      "name": "喜神嫁衣",
+      "description": "击杀10%几率召唤纸人助战",
+      "rarity": "rare",
+      "unlockCondition": "clear_level_2",
+      "effect": {
+        "type": "summon_on_kill",
+        "summon": "paper_minion",
+        "chance": 0.1
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "dragon_vein_protection",
+      "name": "龙脉护体",
+      "description": "受伤20%几率免疫",
+      "rarity": "rare",
+      "unlockCondition": "clear_level_5",
+      "effect": {
+        "type": "damage_immunity",
+        "chance": 0.2
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "half_immortal",
+      "name": "半仙之体",
+      "description": "全属性+15%，SAN上限-30",
+      "rarity": "rare",
+      "unlockCondition": "collect_dan_yang_drops",
+      "effect": {
+        "type": "all_stats",
+        "value": 0.15,
+        "sanityPenalty": 30
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "xin_zhuo_devour",
+      "name": "心浊吞噬",
+      "description": "攻击附带SAN伤害（敌人-10/击）",
+      "rarity": "rare",
+      "unlockCondition": "defeat_xin_zhuo_10",
+      "effect": {
+        "type": "sanity_damage",
+        "value": 10
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "ji_zai_projection",
+      "name": "季灾投影",
+      "description": "随机无敌2秒（冷却30秒）",
+      "rarity": "rare",
+      "unlockCondition": "clear_level_6",
+      "effect": {
+        "type": "random_invincible",
+        "duration": 2,
+        "cooldown": 30
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "bai_yu_jing_peek",
+      "name": "白玉京窥视",
+      "description": "经验+50%，SAN持续-2/秒",
+      "rarity": "rare",
+      "unlockCondition": "collect_all_pages",
+      "effect": {
+        "type": "exp_boost",
+        "value": 0.5,
+        "sanityDrain": 2
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "dao_ye_i_succeeded",
+      "name": "道爷我成了",
+      "description": "伤害+50%，SAN归零无敌5秒（冷却60秒）",
+      "rarity": "epic",
+      "restriction": "cannot_with_dan_yang_possession",
+      "effect": {
+        "type": "damage_and_invincible",
+        "damageBoost": 0.5,
+        "invincibleDuration": 5,
+        "cooldown": 60,
+        "triggerOnZeroSanity": true
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "you_are_fooled",
+      "name": "你被骗了",
+      "description": "敌人30%几率攻击错误目标",
+      "rarity": "epic",
+      "requirement": "zuo_wang_san_yuan",
+      "effect": {
+        "type": "enemy_misattack",
+        "chance": 0.3
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "cant_tell",
+      "name": "分不清了",
+      "description": "SAN归零伤害+100%，但每秒掉血2%",
+      "rarity": "epic",
+      "requirement": "xin_su_awakened",
+      "effect": {
+        "type": "zero_sanity_damage",
+        "damageBoost": 1.0,
+        "healthDrain": 0.02
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "si_ming_gaze",
+      "name": "司命注视",
+      "description": "随机获得一种司命之力（6种随机）",
+      "rarity": "epic",
+      "effect": {
+        "type": "random_si_ming_power",
+        "powers": 6
+      },
+      "maxStacks": 1
+    },
+    {
+      "id": "xin_su_mastery",
+      "name": "心素大成",
+      "description": "SAN上限突破150，溢出转伤害（1SAN=0.5%）",
+      "rarity": "epic",
+      "requirement": "xin_su_awakened",
+      "effect": {
+        "type": "sanity_overflow_damage",
+        "maxSanity": 150,
+        "damagePerSanity": 0.005
+      },
+      "maxStacks": 1
+    }
+  ],
+  "rarityWeights": {
+    "common": 60,
+    "rare": 30,
+    "epic": 10
+  },
+  "selectionCount": 3,
+  "avoidDuplicateRarity": true,
+  "duplicateRarityPenalty": 0.2
+}
